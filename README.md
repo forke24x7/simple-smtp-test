@@ -41,21 +41,8 @@ SMTP-Verbindungen erfolgen vom Container aus; Zielserver, DNS und SMTP-Port
 müssen von dort erreichbar sein. Der Build benötigt Zugriff auf npm und das
 Node-Container-Image.
 
-## Komodo
-
-Einen Stack mit **Git-Repository** als Quelle konfigurieren:
-
-| Einstellung | Wert |
-| --- | --- |
-| Repository | `forke24x7/simple-smtp-test` |
-| Branch | `main` |
-| Run directory | `.` |
-| Compose-Datei | `docker-compose.yml` |
-| Extra arguments | `--build` |
-| Environment (optional) | `SMTP_TEST_PORT=3010` |
-
-Anschließend deployen. `--build` sorgt dafür, dass auch bei einem Redeploy
-Änderungen am Quellcode in das Image übernommen werden.
+`--build` sorgt auch bei erneuten Deployments dafür, dass Änderungen am
+Quellcode in das Image übernommen werden.
 
 Bei Nutzung eines Reverse Proxys muss das Streaming von `/api/test` ohne
 Response-Buffering möglich sein. Der Server setzt `X-Accel-Buffering: no`.

@@ -218,7 +218,7 @@ export default function App() {
       ? result.success
         ? "Test erfolgreich"
         : "Test fehlgeschlagen"
-      : "Bereit für deinen Test";
+      : "Bereit";
 
   return (
     <>
@@ -262,13 +262,9 @@ export default function App() {
       <main className="shell">
         <section className="intro">
           <div>
-            <div className="eyebrow">
-              <span /> SIMPLE TOOLS. CLEAR RESULTS.
-            </div>
             <h1>
               SMTP testen<span>.</span>
             </h1>
-            <p>Verbindung prüfen. Test-Mail senden. Ergebnis sehen.</p>
           </div>
           <div
             className={`status-pill ${busy ? "running" : result ? (result.success ? "success" : "failed") : ""}`}
@@ -543,7 +539,6 @@ export default function App() {
           <div className="results-heading">
             <div>
               <div className="eyebrow">LIVE DIAGNOSTICS</div>
-              <h2>Das Ergebnis zählt.</h2>
             </div>
             <button
               className="export-button"
@@ -692,7 +687,6 @@ export default function App() {
           <span>
             <span className="footer-dot" /> Simple SMTP Test
           </span>
-          <span>Ein Werkzeug. Ein klarer Befund.</span>
         </footer>
       </main>
     </>
