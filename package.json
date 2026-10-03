@@ -1,0 +1,34 @@
+{
+  "name": "simple-smtp-test",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server/index.ts",
+    "build": "tsc --noEmit && vite build && esbuild server/index.ts --bundle --platform=node --packages=external --format=esm --outfile=dist/server/index.js",
+    "start": "node dist/server/index.js",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "nodemailer": "^7.0.10",
+    "zod": "^4.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "lucide-react": "^0.544.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/nodemailer": "^7.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "vite": "^7.1.0",
+    "typescript": "^5.9.0",
+    "esbuild": "^0.25.10",
+    "tsx": "^4.20.0"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}
