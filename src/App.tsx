@@ -687,6 +687,14 @@ export default function App() {
           <span>
             <span className="footer-dot" /> Simple SMTP Test
           </span>
+          <a
+            className="footer-link"
+            href="https://github.com/forke24x7/simple-smtp-test"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            GitHub <ArrowUpRight size={13} />
+          </a>
         </footer>
       </main>
     </>
