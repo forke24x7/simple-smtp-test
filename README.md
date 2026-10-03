@@ -7,14 +7,15 @@ results as JSON. Supports STARTTLS, TLS, and unencrypted SMTP.
 ## Docker Compose
 
 ```bash
-git clone https://github.com/forke24x7/simple-smtp-test.git
-cd simple-smtp-test
+curl -fsSL https://raw.githubusercontent.com/forke24x7/simple-smtp-test/main/docker-compose.yml -o docker-compose.yml
 docker compose up -d --build
 ```
 
 Open `http://<docker-host>:3008`. To change the host port, set
 `SMTP_TEST_PORT=3010` in a `.env` file. No database or volumes are required.
-Re-run the command above to rebuild and deploy updates.
+Only the Compose file is needed. Docker fetches the source and Dockerfile from
+GitHub and builds the image. The Docker host needs internet access for the build.
+Re-run `docker compose up -d --build` to rebuild and deploy updates.
 
 ## Development
 

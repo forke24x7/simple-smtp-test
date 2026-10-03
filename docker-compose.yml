@@ -1,6 +1,9 @@
 services:
   simple-smtp-test:
-    build: .
+    build:
+      context: https://github.com/forke24x7/simple-smtp-test.git#main
+      dockerfile: Dockerfile
+    pull_policy: build
     restart: unless-stopped
     init: true
     ports:
