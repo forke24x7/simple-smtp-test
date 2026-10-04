@@ -1,3 +1,4 @@
+# Standalone deployment: Docker fetches the build context directly from GitHub.
 services:
   simple-smtp-test:
     build:
