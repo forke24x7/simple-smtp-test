@@ -44,3 +44,8 @@ NODE_ENV=production pnpm start
 - Credentials are processed by the app server, never persisted, and excluded
   from exports. Use HTTPS and access control outside a trusted network.
 - Disable reverse-proxy response buffering for `/api/test` to keep logs live.
+
+## License
+
+Licensed under the [MIT License](LICENSE). Free to use, modify, and redistribute,
+including commercially, provided the copyright and license notices are retained.
