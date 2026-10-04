@@ -1,3 +1,4 @@
+// Integration tests exercise SMTP behavior using a local test server.
 import assert from "node:assert/strict";
 import { createServer, type Socket } from "node:net";
 import { test } from "node:test";
