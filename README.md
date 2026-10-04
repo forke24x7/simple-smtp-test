@@ -37,8 +37,7 @@ pnpm build
 NODE_ENV=production pnpm start
 ```
 
-The default port is `3008`; override it with `PORT`. Tests use a local SMTP
-fixture and send no external email.
+Tests use a local SMTP fixture and send no external email.
 
 ## Deployment notes
 
