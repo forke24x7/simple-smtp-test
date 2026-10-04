@@ -1,3 +1,4 @@
+// Configuration validation and event types shared by client and server.
 import { z } from "zod";
 
 export const configSchema = z
