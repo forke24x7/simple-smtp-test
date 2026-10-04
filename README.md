@@ -5,6 +5,13 @@ and authentication, send text or HTML test emails, view live logs, and export
 results as JSON. Supports STARTTLS, TLS, and unencrypted SMTP. Language and theme
 follow browser preferences by default and can be overridden in the header.
 
+## About this project
+
+This tool is AI-generated. I work in IT infrastructure and created it to make
+everyday troubleshooting easier. It is intended to run locally or behind a
+reverse proxy with an authentication layer. It has not been hardened for direct
+exposure to the public internet.
+
 ## Docker Compose
 
 ```bash
