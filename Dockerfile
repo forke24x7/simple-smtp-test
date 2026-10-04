@@ -1,3 +1,4 @@
+# Multi-stage production build with a non-root application runtime.
 FROM node:22-bookworm-slim AS base
 WORKDIR /app
 RUN npm install --global pnpm@9.15.9
