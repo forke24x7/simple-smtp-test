@@ -2,7 +2,7 @@
 services:
   simple-smtp-test:
     build:
-      context: https://github.com/forke24x7/simple-smtp-test.git#codex/m365-oauth
+      context: https://github.com/forke24x7/simple-smtp-test.git#feature/m365-oauth
       dockerfile: Dockerfile
     pull_policy: build
     restart: unless-stopped

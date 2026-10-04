@@ -20,12 +20,10 @@ acquisition and SMTP authentication, or send a test email. Requires Exchange
 Online `SMTP.SendAsApp`, admin consent, mailbox permissions, and SMTP AUTH.
 See [OAuth test notes](docs/m365-oauth.md).
 
-This branch builds `codex/m365-oauth`; `main` remains the stable SMTP version.
-
 ## Docker Compose
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/forke24x7/simple-smtp-test/codex/m365-oauth/docker-compose.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/forke24x7/simple-smtp-test/feature/m365-oauth/docker-compose.yml -o docker-compose.yml
 docker compose up -d --build
 ```
 
