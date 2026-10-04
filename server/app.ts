@@ -1,3 +1,4 @@
+// HTTP API for validated SMTP tests and streamed diagnostic results.
 import express from "express";
 import { configSchema } from "../shared/model.js";
 import { runSMTPTest } from "./smtp.js";
