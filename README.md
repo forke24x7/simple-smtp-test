@@ -1,8 +1,9 @@
 # Simple SMTP Test
 
-A self-hosted SMTP testing tool with light and dark themes. Check connections
+A self-hosted SMTP testing tool with English/German UI and light/dark themes. Check connections
 and authentication, send text or HTML test emails, view live logs, and export
-results as JSON. Supports STARTTLS, TLS, and unencrypted SMTP.
+results as JSON. Supports STARTTLS, TLS, and unencrypted SMTP. Language and theme
+follow browser preferences by default and can be overridden in the header.
 
 ## Docker Compose
 

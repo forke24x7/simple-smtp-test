@@ -141,19 +141,6 @@ p {
   align-items: center;
   gap: 24px;
 }
-.self-hosted {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  color: var(--muted);
-  font-size: 11px;
-}
-.self-hosted > span {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--green);
-}
 .theme-switch {
   display: flex;
   border: 1px solid var(--border);
@@ -948,9 +935,6 @@ textarea {
   .header-right {
     gap: 12px;
   }
-  .self-hosted {
-    display: none;
-  }
 }
 @media (max-width: 620px) {
   .shell {
@@ -1044,5 +1028,22 @@ textarea {
   *:after {
     animation-duration: 0.01ms !important;
     transition: none !important;
+  }
+}
+
+.language-switch button {
+  font-size: 11px;
+  font-weight: 600;
+}
+@media (max-width: 620px) {
+  .topbar-inner {
+    height: auto;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .header-right {
+    gap: 10px;
   }
 }

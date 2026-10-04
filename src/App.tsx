@@ -19,6 +19,7 @@ import {
   Terminal,
   XCircle,
 } from "lucide-react";
+import { translate, browserLanguage, type LanguagePreference } from "./i18n";
 import {
   configSchema,
   defaults,
@@ -28,14 +29,6 @@ import {
   type TestOutcome,
 } from "../shared/model";
 
-const providers = [
-  { name: "Benutzerdefiniert", host: "", port: 587 },
-  { name: "Gmail", host: "smtp.gmail.com", port: 587 },
-  { name: "Microsoft 365", host: "smtp.office365.com", port: 587 },
-  { name: "SendGrid", host: "smtp.sendgrid.net", port: 587 },
-  { name: "Mailgun EU", host: "smtp.eu.mailgun.org", port: 587 },
-  { name: "Amazon SES · Frankfurt", host: "email-smtp.eu-central-1.amazonaws.com", port: 587 },
-];
 type Theme = "light" | "dark" | "system";
 type Log = Extract<TestEvent, { type: "log" }>;
 function Field({
@@ -63,6 +56,30 @@ function Field({
 }
 
 export default function App() {
+  const [languagePreference, setLanguagePreference] = useState<LanguagePreference>(() => {
+    try {
+      const saved = localStorage.getItem("smtp-language");
+      return saved === "de" || saved === "en" ? saved : "system";
+    } catch {
+      return "system";
+    }
+  });
+  const [systemLanguage, setSystemLanguage] = useState(browserLanguage);
+  const language = languagePreference === "system" ? systemLanguage : languagePreference;
+  const t = (text: string) => translate(text, language);
+  useEffect(() => {
+    const updateLanguage = () => setSystemLanguage(browserLanguage());
+    window.addEventListener("languagechange", updateLanguage);
+    return () => window.removeEventListener("languagechange", updateLanguage);
+  }, []);
+  useEffect(() => {
+    document.documentElement.lang = language;
+    try {
+      localStorage.setItem("smtp-language", languagePreference);
+    } catch {
+      /* Storage is optional. */
+    }
+  }, [language, languagePreference]);
   const [theme, setTheme] = useState<Theme>(() => {
     try {
       const saved = localStorage.getItem("smtp-theme");
@@ -71,8 +88,17 @@ export default function App() {
       return "system";
     }
   });
-  const [config, setConfig] = useState<SMTPConfig>({ ...defaults });
-  const [provider, setProvider] = useState("Benutzerdefiniert");
+  const [config, setConfig] = useState<SMTPConfig>(() => ({
+    ...defaults,
+    message: t(defaults.message),
+  }));
+  useEffect(() => {
+    setConfig((c) =>
+      [defaults.message, translate(defaults.message, "en")].includes(c.message)
+        ? { ...c, message: translate(defaults.message, language) }
+        : c,
+    );
+  }, [language]);
   const [visiblePassword, setVisiblePassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [logs, setLogs] = useState<Log[]>([]);
@@ -109,7 +135,6 @@ export default function App() {
       delete next[key];
       return next;
     });
-    if (key === "host" || key === "port") setProvider("Benutzerdefiniert");
   };
   const input = (
     key: "host" | "username" | "password" | "from" | "to" | "subject" | "servername",
@@ -189,8 +214,7 @@ export default function App() {
   };
 
   const reset = () => {
-    setConfig({ ...defaults });
-    setProvider("Benutzerdefiniert");
+    setConfig({ ...defaults, message: t(defaults.message) });
     setResult(null);
     setLogs([]);
     setErrors({});
@@ -212,43 +236,67 @@ export default function App() {
   };
   const status = busy
     ? stage === "mail"
-      ? "Mail wird gesendet"
-      : "Verbindung wird geprüft"
+      ? t("Mail wird gesendet")
+      : t("Verbindung wird geprüft")
     : result
       ? result.success
-        ? "Test erfolgreich"
-        : "Test fehlgeschlagen"
-      : "Bereit";
+        ? t("Test erfolgreich")
+        : t("Test fehlgeschlagen")
+      : t("Bereit");
 
   return (
     <>
       <header className="topbar">
         <div className="shell topbar-inner">
-          <a className="brand" href="/" aria-label="Simple SMTP Test Startseite">
+          <a className="brand" href="/" aria-label={t("Simple SMTP Test Startseite")}>
             <span className="brand-symbol">
               <Mail size={23} strokeWidth={1.8} />
             </span>
             <span>
-              Simple <b>SMTP</b> Test<span className="brand-caption">MAIL SERVER DIAGNOSTICS</span>
+              Simple <b>SMTP</b> Test
+              <span className="brand-caption">{t("MAIL SERVER DIAGNOSTICS")}</span>
             </span>
           </a>
           <div className="header-right">
-            <span className="self-hosted">
-              <span /> Self-hosted
-            </span>
-            <div className="theme-switch" aria-label="Darstellung">
+            <div className="theme-switch language-switch" role="group" aria-label={t("Sprache")}>
+              {(["de", "en", "system"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={languagePreference === value}
+                  aria-label={
+                    value === "system"
+                      ? t("Browsersprache")
+                      : value === "de"
+                        ? "Deutsch"
+                        : "English"
+                  }
+                  title={
+                    value === "system"
+                      ? t("Browsersprache")
+                      : value === "de"
+                        ? "Deutsch"
+                        : "English"
+                  }
+                  onClick={() => setLanguagePreference(value)}
+                >
+                  {value === "system" ? <Monitor size={16} /> : value.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <div className="theme-switch" aria-label={t("Darstellung")}>
               {(
                 [
-                  ["light", Sun, "Hell"],
-                  ["dark", Moon, "Dunkel"],
-                  ["system", Monitor, "System"],
+                  ["light", Sun, t("Hell")],
+                  ["dark", Moon, t("Dunkel")],
+                  ["system", Monitor, t("System")],
                 ] as const
               ).map(([value, Icon, name]) => (
                 <button
                   key={value}
                   type="button"
                   title={name}
-                  aria-label={`${name}modus`}
+                  aria-label={name}
                   aria-pressed={theme === value}
                   onClick={() => setTheme(value)}
                 >
@@ -263,7 +311,8 @@ export default function App() {
         <section className="intro">
           <div>
             <h1>
-              SMTP testen<span>.</span>
+              {t("SMTP testen")}
+              <span>.</span>
             </h1>
           </div>
           <div
@@ -282,42 +331,16 @@ export default function App() {
                 <div className="panel-heading">
                   <div className="panel-title">
                     <span className="step">01</span>
-                    <h2>Mailserver</h2>
+                    <h2>{t("Mailserver")}</h2>
                   </div>
                   <Server size={19} className="muted" />
                 </div>
                 <div className="panel-body">
-                  <div className="field">
-                    <label htmlFor="provider">Anbietervorlage</label>
-                    <div className="select-wrap">
-                      <select
-                        id="provider"
-                        value={provider}
-                        onChange={(e) => {
-                          const p = providers.find((p) => p.name === e.target.value)!;
-                          setProvider(p.name);
-                          setConfig((c) => ({
-                            ...c,
-                            host: p.host,
-                            port: p.port,
-                            security: "starttls",
-                            authenticate: !!p.host,
-                          }));
-                          setErrors({});
-                        }}
-                      >
-                        {providers.map((p) => (
-                          <option key={p.name}>{p.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={15} />
-                    </div>
-                  </div>
                   <div className="host-row">
-                    <Field id="host" label="SMTP-Host" error={errors.host}>
+                    <Field id="host" label={t("SMTP-Host")} error={errors.host && t(errors.host)}>
                       {input("host", "smtp.example.com")}
                     </Field>
-                    <Field id="port" label="Port" error={errors.port}>
+                    <Field id="port" label="Port" error={errors.port && t(errors.port)}>
                       <input
                         id="port"
                         type="number"
@@ -331,14 +354,14 @@ export default function App() {
                   </div>
                   <div className="field">
                     <span className="field-label" id="encryption-label">
-                      Verschlüsselung
+                      {t("Verschlüsselung")}
                     </span>
                     <div className="segments" role="group" aria-labelledby="encryption-label">
                       {(
                         [
                           ["starttls", "STARTTLS"],
                           ["tls", "TLS / SSL"],
-                          ["none", "Keine"],
+                          ["none", t("Keine")],
                         ] as const
                       ).map(([value, label]) => (
                         <button
@@ -356,7 +379,8 @@ export default function App() {
                   <div className="auth-section">
                     <label className="toggle-label" htmlFor="authenticate">
                       <span>
-                        <ShieldCheck size={17} /> Authentifizierung
+                        <ShieldCheck size={17} />
+                        {t("Authentifizierung")}
                       </span>
                       <input
                         id="authenticate"
@@ -368,20 +392,28 @@ export default function App() {
                     </label>
                     {config.authenticate && (
                       <div className="auth-fields">
-                        <Field id="username" label="Benutzername" error={errors.username}>
+                        <Field
+                          id="username"
+                          label={t("Benutzername")}
+                          error={errors.username && t(errors.username)}
+                        >
                           {input("username", "name@example.com")}
                         </Field>
-                        <Field id="password" label="Passwort" error={errors.password}>
+                        <Field
+                          id="password"
+                          label={t("Passwort")}
+                          error={errors.password && t(errors.password)}
+                        >
                           <div className="password-wrap">
                             {input(
                               "password",
-                              "Passwort oder App-Passwort",
+                              t("Passwort oder App-Passwort"),
                               visiblePassword ? "text" : "password",
                             )}
                             <button
                               type="button"
                               aria-label={
-                                visiblePassword ? "Passwort verbergen" : "Passwort anzeigen"
+                                visiblePassword ? t("Passwort verbergen") : t("Passwort anzeigen")
                               }
                               aria-pressed={visiblePassword}
                               onClick={() => setVisiblePassword((v) => !v)}
@@ -395,14 +427,14 @@ export default function App() {
                   </div>
                   <details className="advanced">
                     <summary>
-                      Erweiterte Einstellungen
+                      {t("Erweiterte Einstellungen")}
                       <ChevronDown size={14} />
                     </summary>
                     <div className="advanced-body">
                       <Field
                         id="timeout"
-                        label="Timeout pro Schritt (Sekunden)"
-                        error={errors.timeout}
+                        label={t("Timeout pro Schritt (Sekunden)")}
+                        error={errors.timeout && t(errors.timeout)}
                       >
                         <input
                           id="timeout"
@@ -415,10 +447,10 @@ export default function App() {
                       </Field>
                       <Field
                         id="servername"
-                        label="TLS-Hostname (optional)"
-                        error={errors.servername}
+                        label={t("TLS-Hostname (optional)")}
+                        error={errors.servername && t(errors.servername)}
                       >
-                        {input("servername", "Für Zertifikatsprüfung bei IP-Adressen")}
+                        {input("servername", t("Für Zertifikatsprüfung bei IP-Adressen"))}
                       </Field>
                       <label className="checkbox-label">
                         <input
@@ -426,7 +458,7 @@ export default function App() {
                           checked={config.validateCertificate}
                           onChange={(e) => update("validateCertificate", e.target.checked)}
                         />{" "}
-                        TLS-Zertifikat prüfen
+                        {t("TLS-Zertifikat prüfen")}
                       </label>
                     </div>
                   </details>
@@ -437,25 +469,26 @@ export default function App() {
                 <div className="panel-heading">
                   <div className="panel-title">
                     <span className="step">02</span>
-                    <h2>Testnachricht</h2>
+                    <h2>{t("Testnachricht")}</h2>
                   </div>
                   <Mail size={19} className="muted" />
                 </div>
                 <div className="panel-body">
-                  <div className="segments test-mode" role="group" aria-label="Testart">
+                  <div className="segments test-mode" role="group" aria-label={t("Testart")}>
                     <button
                       type="button"
                       aria-pressed={config.mode === "connection"}
                       onClick={() => update("mode", "connection")}
                     >
-                      Nur Verbindung
+                      {t("Nur Verbindung")}
                     </button>
                     <button
                       type="button"
                       aria-pressed={config.mode === "mail"}
                       onClick={() => update("mode", "mail")}
                     >
-                      Mit Test-Mail <ArrowUpRight size={14} />
+                      {t("Mit Test-Mail")}
+                      <ArrowUpRight size={14} />
                     </button>
                   </div>
                   {config.mode === "connection" ? (
@@ -463,29 +496,43 @@ export default function App() {
                       <div className="connection-icon">
                         <Server size={30} strokeWidth={1.5} />
                       </div>
-                      <h3>Einfach die Verbindung prüfen.</h3>
+                      <h3>{t("Einfach die Verbindung prüfen.")}</h3>
                       <p>
-                        Prüft den SMTP-Handshake und, wenn aktiviert, die Anmeldung. Es wird keine
-                        Mail versendet.
+                        {t(
+                          "Prüft den SMTP-Handshake und, wenn aktiviert, die Anmeldung. Es wird keine Mail versendet.",
+                        )}
                       </p>
                       <span>
-                        <ShieldCheck size={14} /> Verbindungstest
+                        <ShieldCheck size={14} />
+                        {t("Verbindungstest")}
                       </span>
                     </div>
                   ) : (
                     <>
                       <div className="email-row">
-                        <Field id="from" label="Absender" error={errors.from}>
+                        <Field
+                          id="from"
+                          label={t("Absender")}
+                          error={errors.from && t(errors.from)}
+                        >
                           {input("from", "sender@example.com", "email")}
                         </Field>
-                        <Field id="to" label="Empfänger" error={errors.to}>
+                        <Field id="to" label={t("Empfänger")} error={errors.to && t(errors.to)}>
                           {input("to", "recipient@example.com", "email")}
                         </Field>
                       </div>
-                      <Field id="subject" label="Betreff" error={errors.subject}>
-                        {input("subject", "Betreff der Test-Mail")}
+                      <Field
+                        id="subject"
+                        label={t("Betreff")}
+                        error={errors.subject && t(errors.subject)}
+                      >
+                        {input("subject", t("Betreff der Test-Mail"))}
                       </Field>
-                      <Field id="message" label="Nachricht" error={errors.message}>
+                      <Field
+                        id="message"
+                        label={t("Nachricht")}
+                        error={errors.message && t(errors.message)}
+                      >
                         <textarea
                           id="message"
                           rows={5}
@@ -500,7 +547,8 @@ export default function App() {
                           checked={config.html}
                           onChange={(e) => update("html", e.target.checked)}
                         />{" "}
-                        Als HTML senden<span>TEXT / HTML</span>
+                        {t("Als HTML senden")}
+                        <span>TEXT / HTML</span>
                       </label>
                     </>
                   )}
@@ -512,17 +560,17 @@ export default function App() {
             <span className="action-note">
               <ShieldCheck size={16} />
               {config.mode === "mail"
-                ? "Verbindung, Anmeldung und Mailversand"
-                : "Verbindung und optionale Anmeldung"}
+                ? t("Verbindung, Anmeldung und Mailversand")
+                : t("Verbindung und optionale Anmeldung")}
             </span>
             <div className="action-buttons">
               <button type="button" className="secondary-button" disabled={busy} onClick={reset}>
                 <RotateCcw size={15} />
-                <span>Zurücksetzen</span>
+                <span>{t("Zurücksetzen")}</span>
               </button>
               <button className="primary-button" type="submit" disabled={busy}>
                 {busy ? <LoaderCircle size={17} className="spin" /> : <Send size={17} />}
-                {busy ? "Test läuft …" : "Test starten"}
+                {busy ? t("Test läuft …") : t("Test starten")}
                 <span className="button-arrow">↗</span>
               </button>
             </div>
@@ -531,14 +579,14 @@ export default function App() {
         {notice && (
           <div className="notice" role="alert">
             <XCircle size={18} />
-            {notice}
+            {t(notice)}
           </div>
         )}
 
         <section className="results-section">
           <div className="results-heading">
             <div>
-              <div className="eyebrow">LIVE DIAGNOSTICS</div>
+              <div className="eyebrow">{t("LIVE DIAGNOSTICS")}</div>
             </div>
             <button
               className="export-button"
@@ -546,55 +594,60 @@ export default function App() {
               disabled={!result || busy}
               onClick={exportResult}
             >
-              <Download size={15} /> JSON exportieren
+              <Download size={15} />
+              {t("JSON exportieren")}
             </button>
           </div>
           <div className="metrics">
             {[
               {
-                label: "Verbindung",
+                label: t("Verbindung"),
                 icon: Server,
                 value: result
                   ? result.connected
-                    ? "Erfolgreich"
-                    : "Fehlgeschlagen"
+                    ? t("Erfolgreich")
+                    : t("Fehlgeschlagen")
                   : busy
-                    ? "Wird geprüft …"
-                    : "Noch nicht geprüft",
+                    ? t("Wird geprüft …")
+                    : t("Noch nicht geprüft"),
                 ok: result?.connected,
               },
               {
-                label: "Authentifizierung",
+                label: t("Authentifizierung"),
                 icon: ShieldCheck,
                 value: result
                   ? result.authenticated === null
-                    ? "Ohne Anmeldung"
+                    ? t("Ohne Anmeldung")
                     : result.authenticated
-                      ? "Erfolgreich"
-                      : "Nicht bestätigt"
+                      ? t("Erfolgreich")
+                      : t("Nicht bestätigt")
                   : busy && tested?.authenticate
-                    ? "Wird geprüft …"
-                    : "Noch nicht geprüft",
+                    ? t("Wird geprüft …")
+                    : t("Noch nicht geprüft"),
                 ok: result?.authenticated,
               },
               {
-                label: "Mailversand",
+                label: t("Mailversand"),
                 icon: Mail,
                 value: result
                   ? result.sent === null
-                    ? "Nicht angefordert"
+                    ? t("Nicht angefordert")
                     : result.sent
-                      ? "Server hat angenommen"
-                      : "Nicht gesendet"
+                      ? t("Server hat angenommen")
+                      : t("Nicht gesendet")
                   : stage === "mail"
-                    ? "Wird gesendet …"
-                    : "Noch nicht geprüft",
+                    ? t("Wird gesendet …")
+                    : t("Noch nicht geprüft"),
                 ok: result?.sent,
               },
               {
-                label: "Dauer",
+                label: t("Dauer"),
                 icon: Terminal,
-                value: result ? `${(result.duration / 1000).toFixed(2)} s` : busy ? "Läuft …" : "—",
+                value: result
+                  ? `${(result.duration / 1000).toFixed(2)} s`
+                  : busy
+                    ? t("Läuft …")
+                    : "—",
                 ok: null,
               },
             ].map(({ label, icon: Icon, value, ok }) => (
@@ -617,16 +670,16 @@ export default function App() {
                 <strong>
                   {result.success
                     ? result.sent
-                      ? "Test-Mail angenommen"
-                      : "Verbindung erfolgreich geprüft"
-                    : "Test fehlgeschlagen"}
+                      ? t("Test-Mail angenommen")
+                      : t("Verbindung erfolgreich geprüft")
+                    : t("Test fehlgeschlagen")}
                 </strong>
                 <span>
                   {result.success
                     ? result.sent
-                      ? "Die Zustellung ins Postfach hängt vom empfangenden Mailserver ab."
-                      : "Der Mailserver antwortet auf SMTP-Anfragen."
-                    : result.error}
+                      ? t("Die Zustellung ins Postfach hängt vom empfangenden Mailserver ab.")
+                      : t("Der Mailserver antwortet auf SMTP-Anfragen.")
+                    : result.error && t(result.error)}
                 </span>
               </div>
               {result.code && <code>{result.code}</code>}
@@ -636,39 +689,41 @@ export default function App() {
             <div className="console-toolbar">
               <div>
                 <Terminal size={16} />
-                <span>Testprotokoll</span>
+                <span>{t("Testprotokoll")}</span>
                 <span className="console-count">
                   {logs.length.toString().padStart(2, "0")} EVENTS
                 </span>
               </div>
               <span className={`console-state ${busy ? "live" : ""}`}>
                 <span />
-                {busy ? "LIVE" : result ? "ABGESCHLOSSEN" : "STANDBY"}
+                {busy ? "LIVE" : result ? t("ABGESCHLOSSEN") : "STANDBY"}
               </span>
             </div>
             <div
               className="console-body"
               ref={consoleRef}
               role="log"
-              aria-label="SMTP-Testprotokoll"
+              aria-label={t("SMTP-Testprotokoll")}
             >
               {!logs.length ? (
                 <div className="console-empty">
                   <span className="prompt">›</span>
                   <div>
-                    Bereit, wenn du es bist.
-                    <span>Starte einen Test. Hier erscheinen die einzelnen Schritte.</span>
+                    {t("Bereit, wenn du es bist.")}
+                    <span>{t("Starte einen Test. Hier erscheinen die einzelnen Schritte.")}</span>
                   </div>
                   <span className="cursor" />
                 </div>
               ) : (
                 logs.map((log, i) => (
                   <div className={`log-line ${log.level}`} key={i}>
-                    <time>{new Date(log.time).toLocaleTimeString("de-DE", { hour12: false })}</time>
+                    <time>
+                      {new Date(log.time).toLocaleTimeString(language, { hour12: false })}
+                    </time>
                     <span className="log-level">
                       {log.level === "success" ? "OK" : log.level === "error" ? "ERR" : "INFO"}
                     </span>
-                    <span>{log.message}</span>
+                    <span>{t(log.message)}</span>
                   </div>
                 ))
               )}
@@ -677,7 +732,7 @@ export default function App() {
               <span>
                 {tested
                   ? `${tested.host}:${tested.port} · ${tested.security.toUpperCase()}`
-                  : "Kein Test ausgeführt"}
+                  : t("Kein Test ausgeführt")}
               </span>
               <span>SMTP / TCP</span>
             </div>
