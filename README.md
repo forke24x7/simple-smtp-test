@@ -37,8 +37,6 @@ pnpm build
 NODE_ENV=production pnpm start
 ```
 
-Tests use a local SMTP fixture and send no external email.
-
 ## Deployment notes
 
 - SMTP servers must be reachable from the container. A successful send confirms
