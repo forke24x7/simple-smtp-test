@@ -1052,6 +1052,10 @@ textarea {
   width: fit-content;
   margin-bottom: 22px;
 }
+.profile-switch button {
+  flex: 0 0 auto;
+  padding-inline: 12px;
+}
 .oauth-endpoint {
   display: flex;
   align-items: center;
