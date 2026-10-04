@@ -1,3 +1,4 @@
+# Root package and dependency build settings.
 packages:
   - '.'
 verifyDepsBeforeRun: false
