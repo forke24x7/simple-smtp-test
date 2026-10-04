@@ -1,3 +1,4 @@
+# Keep local dependencies, generated files and secrets out of the build context.
 .git
 node_modules
 dist
