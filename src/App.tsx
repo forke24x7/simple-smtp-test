@@ -23,6 +23,7 @@ import { translate, browserLanguage, type LanguagePreference } from "./i18n";
 import {
   configSchema,
   defaults,
+  publicSettings,
   type SMTPConfig,
   type Stage,
   type TestEvent,
@@ -108,6 +109,44 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [tested, setTested] = useState<SMTPConfig | null>(null);
   const consoleRef = useRef<HTMLDivElement>(null);
+  const smtpSettings = useRef({
+    host: "",
+    port: 587,
+    security: "starttls" as SMTPConfig["security"],
+    authenticate: false,
+    validateCertificate: true,
+    servername: "",
+  });
+  const selectProfile = (profile: SMTPConfig["profile"]) => {
+    if (profile === config.profile) return;
+    if (profile === "m365") {
+      smtpSettings.current = {
+        host: config.host,
+        port: config.port,
+        security: config.security,
+        authenticate: config.authenticate,
+        validateCertificate: config.validateCertificate,
+        servername: config.servername,
+      };
+      setConfig((c) => ({
+        ...c,
+        profile,
+        mode: "connection",
+        host: "smtp.office365.com",
+        port: 587,
+        security: "starttls",
+        authenticate: true,
+        validateCertificate: true,
+        servername: "",
+      }));
+    } else setConfig((c) => ({ ...c, profile, ...smtpSettings.current }));
+    setErrors({});
+    setNotice("");
+    setResult(null);
+    setTested(null);
+    setLogs([]);
+    setVisiblePassword(false);
+  };
 
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
@@ -137,7 +176,18 @@ export default function App() {
     });
   };
   const input = (
-    key: "host" | "username" | "password" | "from" | "to" | "subject" | "servername",
+    key:
+      | "host"
+      | "username"
+      | "password"
+      | "from"
+      | "to"
+      | "subject"
+      | "servername"
+      | "tenantId"
+      | "clientId"
+      | "clientSecret"
+      | "mailbox",
     placeholder: string,
     type = "text",
   ) => (
@@ -146,7 +196,7 @@ export default function App() {
       value={config[key]}
       placeholder={placeholder}
       type={type}
-      autoComplete={key === "password" ? "new-password" : "off"}
+      autoComplete={key === "password" || key === "clientSecret" ? "new-password" : "off"}
       onChange={(e) => update(key, e.target.value)}
       aria-invalid={!!errors[key]}
       aria-describedby={errors[key] ? `${key}-error` : undefined}
@@ -167,10 +217,10 @@ export default function App() {
     setBusy(true);
     setLogs([]);
     setResult(null);
-    setStage("connection");
+    setStage(config.profile === "m365" ? "token" : "connection");
     setNotice("");
     // Keep only non-secret settings for the result and export.
-    setTested({ ...parsed.data, username: "", password: "", message: "" });
+    setTested({ ...parsed.data, username: "", password: "", clientSecret: "", message: "" });
     let completed = false;
     try {
       const response = await fetch("/api/test", {
@@ -224,7 +274,7 @@ export default function App() {
   };
   const exportResult = () => {
     if (!result || !tested) return;
-    const { username: _user, password: _password, message: _message, ...settings } = tested;
+    const settings = publicSettings(tested);
     const url = URL.createObjectURL(
       new Blob([JSON.stringify({ settings, result, logs }, null, 2)], { type: "application/json" }),
     );
@@ -235,9 +285,11 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
   const status = busy
-    ? stage === "mail"
-      ? t("Mail wird gesendet")
-      : t("Verbindung wird geprüft")
+    ? stage === "token"
+      ? t("Token wird angefordert")
+      : stage === "mail"
+        ? t("Mail wird gesendet")
+        : t("Verbindung wird geprüft")
     : result
       ? result.success
         ? t("Test erfolgreich")
@@ -326,105 +378,182 @@ export default function App() {
 
         <form onSubmit={start}>
           <fieldset disabled={busy} className="form-fieldset">
+            <div className="segments profile-switch" role="group" aria-label={t("Testverfahren")}>
+              <button
+                type="button"
+                aria-pressed={config.profile === "smtp"}
+                onClick={() => selectProfile("smtp")}
+              >
+                SMTP
+              </button>
+              <button
+                type="button"
+                aria-pressed={config.profile === "m365"}
+                onClick={() => selectProfile("m365")}
+              >
+                Microsoft 365 OAuth
+              </button>
+            </div>
             <div className="workspace">
               <section className="panel server-panel">
                 <div className="panel-heading">
                   <div className="panel-title">
                     <span className="step">01</span>
-                    <h2>{t("Mailserver")}</h2>
+                    <h2>{config.profile === "m365" ? "Microsoft 365" : t("Mailserver")}</h2>
                   </div>
                   <Server size={19} className="muted" />
                 </div>
                 <div className="panel-body">
-                  <div className="host-row">
-                    <Field id="host" label={t("SMTP-Host")} error={errors.host && t(errors.host)}>
-                      {input("host", "smtp.example.com")}
-                    </Field>
-                    <Field id="port" label="Port" error={errors.port && t(errors.port)}>
-                      <input
-                        id="port"
-                        type="number"
-                        min="1"
-                        max="65535"
-                        value={config.port || ""}
-                        onChange={(e) => update("port", Number(e.target.value))}
-                        aria-invalid={!!errors.port}
-                      />
-                    </Field>
-                  </div>
-                  <div className="field">
-                    <span className="field-label" id="encryption-label">
-                      {t("Verschlüsselung")}
-                    </span>
-                    <div className="segments" role="group" aria-labelledby="encryption-label">
-                      {(
-                        [
-                          ["starttls", "STARTTLS"],
-                          ["tls", "TLS / SSL"],
-                          ["none", t("Keine")],
-                        ] as const
-                      ).map(([value, label]) => (
-                        <button
-                          key={value}
-                          type="button"
-                          aria-pressed={config.security === value}
-                          onClick={() => update("security", value)}
-                        >
-                          {config.security === value && <Check size={13} />}
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="auth-section">
-                    <label className="toggle-label" htmlFor="authenticate">
-                      <span>
-                        <ShieldCheck size={17} />
-                        {t("Authentifizierung")}
-                      </span>
-                      <input
-                        id="authenticate"
-                        type="checkbox"
-                        role="switch"
-                        checked={config.authenticate}
-                        onChange={(e) => update("authenticate", e.target.checked)}
-                      />
-                    </label>
-                    {config.authenticate && (
-                      <div className="auth-fields">
+                  {config.profile === "m365" ? (
+                    <>
+                      <div className="oauth-endpoint">
+                        <Server size={15} /> smtp.office365.com:587 · STARTTLS
+                      </div>
+                      <Field
+                        id="tenantId"
+                        label="Tenant ID"
+                        error={errors.tenantId && t(errors.tenantId)}
+                      >
+                        {input("tenantId", "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")}
+                      </Field>
+                      <Field
+                        id="clientId"
+                        label="Application (Client) ID"
+                        error={errors.clientId && t(errors.clientId)}
+                      >
+                        {input("clientId", "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")}
+                      </Field>
+                      <Field
+                        id="clientSecret"
+                        label="Client Secret"
+                        error={errors.clientSecret && t(errors.clientSecret)}
+                      >
+                        <div className="password-wrap">
+                          {input(
+                            "clientSecret",
+                            t("Secret-Wert, nicht Secret-ID"),
+                            visiblePassword ? "text" : "password",
+                          )}
+                          <button
+                            type="button"
+                            aria-label={
+                              visiblePassword ? t("Secret verbergen") : t("Secret anzeigen")
+                            }
+                            aria-pressed={visiblePassword}
+                            onClick={() => setVisiblePassword((v) => !v)}
+                          >
+                            {visiblePassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                          </button>
+                        </div>
+                      </Field>
+                      <Field
+                        id="mailbox"
+                        label={t("Mailbox für die Anmeldung")}
+                        error={errors.mailbox && t(errors.mailbox)}
+                      >
+                        {input("mailbox", "mailbox@example.com", "email")}
+                      </Field>
+                      <p className="oauth-note">{t("Client Credentials · SMTP.SendAsApp")}</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="host-row">
                         <Field
-                          id="username"
-                          label={t("Benutzername")}
-                          error={errors.username && t(errors.username)}
+                          id="host"
+                          label={t("SMTP-Host")}
+                          error={errors.host && t(errors.host)}
                         >
-                          {input("username", "name@example.com")}
+                          {input("host", "smtp.example.com")}
                         </Field>
-                        <Field
-                          id="password"
-                          label={t("Passwort")}
-                          error={errors.password && t(errors.password)}
-                        >
-                          <div className="password-wrap">
-                            {input(
-                              "password",
-                              t("Passwort oder App-Passwort"),
-                              visiblePassword ? "text" : "password",
-                            )}
-                            <button
-                              type="button"
-                              aria-label={
-                                visiblePassword ? t("Passwort verbergen") : t("Passwort anzeigen")
-                              }
-                              aria-pressed={visiblePassword}
-                              onClick={() => setVisiblePassword((v) => !v)}
-                            >
-                              {visiblePassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                            </button>
-                          </div>
+                        <Field id="port" label="Port" error={errors.port && t(errors.port)}>
+                          <input
+                            id="port"
+                            type="number"
+                            min="1"
+                            max="65535"
+                            value={config.port || ""}
+                            onChange={(e) => update("port", Number(e.target.value))}
+                            aria-invalid={!!errors.port}
+                          />
                         </Field>
                       </div>
-                    )}
-                  </div>
+                      <div className="field">
+                        <span className="field-label" id="encryption-label">
+                          {t("Verschlüsselung")}
+                        </span>
+                        <div className="segments" role="group" aria-labelledby="encryption-label">
+                          {(
+                            [
+                              ["starttls", "STARTTLS"],
+                              ["tls", "TLS / SSL"],
+                              ["none", t("Keine")],
+                            ] as const
+                          ).map(([value, label]) => (
+                            <button
+                              key={value}
+                              type="button"
+                              aria-pressed={config.security === value}
+                              onClick={() => update("security", value)}
+                            >
+                              {config.security === value && <Check size={13} />}
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="auth-section">
+                        <label className="toggle-label" htmlFor="authenticate">
+                          <span>
+                            <ShieldCheck size={17} />
+                            {t("Authentifizierung")}
+                          </span>
+                          <input
+                            id="authenticate"
+                            type="checkbox"
+                            role="switch"
+                            checked={config.authenticate}
+                            onChange={(e) => update("authenticate", e.target.checked)}
+                          />
+                        </label>
+                        {config.authenticate && (
+                          <div className="auth-fields">
+                            <Field
+                              id="username"
+                              label={t("Benutzername")}
+                              error={errors.username && t(errors.username)}
+                            >
+                              {input("username", "name@example.com")}
+                            </Field>
+                            <Field
+                              id="password"
+                              label={t("Passwort")}
+                              error={errors.password && t(errors.password)}
+                            >
+                              <div className="password-wrap">
+                                {input(
+                                  "password",
+                                  t("Passwort oder App-Passwort"),
+                                  visiblePassword ? "text" : "password",
+                                )}
+                                <button
+                                  type="button"
+                                  aria-label={
+                                    visiblePassword
+                                      ? t("Passwort verbergen")
+                                      : t("Passwort anzeigen")
+                                  }
+                                  aria-pressed={visiblePassword}
+                                  onClick={() => setVisiblePassword((v) => !v)}
+                                >
+                                  {visiblePassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                                </button>
+                              </div>
+                            </Field>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                   <details className="advanced">
                     <summary>
                       {t("Erweiterte Einstellungen")}
@@ -445,21 +574,25 @@ export default function App() {
                           onChange={(e) => update("timeout", Number(e.target.value) * 1000)}
                         />
                       </Field>
-                      <Field
-                        id="servername"
-                        label={t("TLS-Hostname (optional)")}
-                        error={errors.servername && t(errors.servername)}
-                      >
-                        {input("servername", t("Für Zertifikatsprüfung bei IP-Adressen"))}
-                      </Field>
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={config.validateCertificate}
-                          onChange={(e) => update("validateCertificate", e.target.checked)}
-                        />{" "}
-                        {t("TLS-Zertifikat prüfen")}
-                      </label>
+                      {config.profile === "smtp" && (
+                        <>
+                          <Field
+                            id="servername"
+                            label={t("TLS-Hostname (optional)")}
+                            error={errors.servername && t(errors.servername)}
+                          >
+                            {input("servername", t("Für Zertifikatsprüfung bei IP-Adressen"))}
+                          </Field>
+                          <label className="checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={config.validateCertificate}
+                              onChange={(e) => update("validateCertificate", e.target.checked)}
+                            />{" "}
+                            {t("TLS-Zertifikat prüfen")}
+                          </label>
+                        </>
+                      )}
                     </div>
                   </details>
                 </div>
@@ -480,7 +613,7 @@ export default function App() {
                       aria-pressed={config.mode === "connection"}
                       onClick={() => update("mode", "connection")}
                     >
-                      {t("Nur Verbindung")}
+                      {config.profile === "m365" ? t("Token + Anmeldung") : t("Nur Verbindung")}
                     </button>
                     <button
                       type="button"
@@ -496,11 +629,19 @@ export default function App() {
                       <div className="connection-icon">
                         <Server size={30} strokeWidth={1.5} />
                       </div>
-                      <h3>{t("Einfach die Verbindung prüfen.")}</h3>
+                      <h3>
+                        {config.profile === "m365"
+                          ? t("OAuth-Anmeldung prüfen.")
+                          : t("Einfach die Verbindung prüfen.")}
+                      </h3>
                       <p>
-                        {t(
-                          "Prüft den SMTP-Handshake und, wenn aktiviert, die Anmeldung. Es wird keine Mail versendet.",
-                        )}
+                        {config.profile === "m365"
+                          ? t(
+                              "Fordert ein Token an und prüft die SMTP-Anmeldung. Es wird keine Mail versendet.",
+                            )
+                          : t(
+                              "Prüft den SMTP-Handshake und, wenn aktiviert, die Anmeldung. Es wird keine Mail versendet.",
+                            )}
                       </p>
                       <span>
                         <ShieldCheck size={14} />
@@ -559,9 +700,11 @@ export default function App() {
           <div className="action-bar">
             <span className="action-note">
               <ShieldCheck size={16} />
-              {config.mode === "mail"
-                ? t("Verbindung, Anmeldung und Mailversand")
-                : t("Verbindung und optionale Anmeldung")}
+              {config.profile === "m365" && config.mode === "connection"
+                ? t("Token und SMTP-OAuth-Anmeldung")
+                : config.mode === "mail"
+                  ? t("Verbindung, Anmeldung und Mailversand")
+                  : t("Verbindung und optionale Anmeldung")}
             </span>
             <div className="action-buttons">
               <button type="button" className="secondary-button" disabled={busy} onClick={reset}>
@@ -598,15 +741,37 @@ export default function App() {
               {t("JSON exportieren")}
             </button>
           </div>
-          <div className="metrics">
+          <div
+            className={`metrics ${(tested?.profile || config.profile) === "m365" ? "oauth-metrics" : ""}`}
+          >
             {[
+              ...((tested?.profile || config.profile) === "m365"
+                ? [
+                    {
+                      label: t("OAuth-Token"),
+                      icon: ShieldCheck,
+                      value: result
+                        ? result.tokenAcquired
+                          ? t("Erhalten")
+                          : t("Fehlgeschlagen")
+                        : stage === "token"
+                          ? t("Wird angefordert …")
+                          : busy
+                            ? t("Erhalten")
+                            : t("Noch nicht geprüft"),
+                      ok: result?.tokenAcquired,
+                    },
+                  ]
+                : []),
               {
                 label: t("Verbindung"),
                 icon: Server,
                 value: result
-                  ? result.connected
-                    ? t("Erfolgreich")
-                    : t("Fehlgeschlagen")
+                  ? result.tokenAcquired === false
+                    ? t("Nicht ausgeführt")
+                    : result.connected
+                      ? t("Erfolgreich")
+                      : t("Fehlgeschlagen")
                   : busy
                     ? t("Wird geprüft …")
                     : t("Noch nicht geprüft"),
@@ -616,11 +781,13 @@ export default function App() {
                 label: t("Authentifizierung"),
                 icon: ShieldCheck,
                 value: result
-                  ? result.authenticated === null
-                    ? t("Ohne Anmeldung")
-                    : result.authenticated
-                      ? t("Erfolgreich")
-                      : t("Nicht bestätigt")
+                  ? result.tokenAcquired === false
+                    ? t("Nicht ausgeführt")
+                    : result.authenticated === null
+                      ? t("Ohne Anmeldung")
+                      : result.authenticated
+                        ? t("Erfolgreich")
+                        : t("Nicht bestätigt")
                   : busy && tested?.authenticate
                     ? t("Wird geprüft …")
                     : t("Noch nicht geprüft"),

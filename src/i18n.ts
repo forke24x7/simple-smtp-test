@@ -5,6 +5,34 @@ export function browserLanguage(): Language {
   return preferred.toLowerCase().startsWith("de") ? "de" : "en";
 }
 const english: Record<string, string> = {
+  "Token und SMTP-OAuth-Anmeldung": "Token and SMTP OAuth authentication",
+  "Nicht ausgeführt": "Not run",
+  Testverfahren: "Test method",
+  "Token wird angefordert": "Requesting token",
+  "Secret-Wert, nicht Secret-ID": "Secret value, not secret ID",
+  "Secret verbergen": "Hide secret",
+  "Secret anzeigen": "Show secret",
+  "Mailbox für die Anmeldung": "Authentication mailbox",
+  "Client Credentials · SMTP.SendAsApp": "Client Credentials · SMTP.SendAsApp",
+  "Token + Anmeldung": "Token + authentication",
+  "OAuth-Anmeldung prüfen.": "Check OAuth authentication.",
+  "Fordert ein Token an und prüft die SMTP-Anmeldung. Es wird keine Mail versendet.":
+    "Requests a token and verifies SMTP authentication. No email is sent.",
+  "OAuth-Token": "OAuth token",
+  Erhalten: "Acquired",
+  "Wird angefordert …": "Requesting …",
+  "Gültige GUID eingeben": "Enter a valid GUID",
+  "Client Secret fehlt": "Client secret is required",
+  "Microsoft 365 benötigt smtp.office365.com:587 mit STARTTLS und Zertifikatsprüfung":
+    "Microsoft 365 requires smtp.office365.com:587 with STARTTLS and certificate validation",
+  "Microsoft-Zugriffstoken wird angefordert.": "Requesting Microsoft access token.",
+  "Microsoft-Zugriffstoken erhalten.": "Microsoft access token acquired.",
+  "Microsoft hat die Token-Anforderung abgelehnt.": "Microsoft rejected the token request.",
+  "Microsoft hat kein gültiges Zugriffstoken geliefert.":
+    "Microsoft did not return a valid access token.",
+  "Microsoft-Token-Endpunkt nicht erreichbar oder Zeitüberschreitung.":
+    "Microsoft token endpoint could not be reached or timed out.",
+
   "Simple SMTP Test Startseite": "Simple SMTP Test home",
   "MAIL SERVER DIAGNOSTICS": "MAIL SERVER DIAGNOSTICS",
   Darstellung: "Appearance",

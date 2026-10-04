@@ -1047,3 +1047,40 @@ textarea {
     gap: 10px;
   }
 }
+
+.profile-switch {
+  width: fit-content;
+  margin-bottom: 22px;
+}
+.oauth-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.oauth-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.oauth-metrics {
+  grid-template-columns: repeat(5, 1fr);
+}
+@media (max-width: 800px) {
+  .oauth-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .oauth-metrics .metric {
+    border: 0;
+  }
+  .oauth-metrics .metric:nth-child(even) {
+    border-left: 1px solid var(--border);
+  }
+  .oauth-metrics .metric:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+  .oauth-metrics .metric:last-child {
+    grid-column: 1 / -1;
+  }
+}

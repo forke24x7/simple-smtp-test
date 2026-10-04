@@ -3,6 +3,11 @@ import { z } from "zod";
 
 export const configSchema = z
   .object({
+    profile: z.enum(["smtp", "m365"]).default("smtp"),
+    tenantId: z.string().trim().max(36).default(""),
+    clientId: z.string().trim().max(36).default(""),
+    clientSecret: z.string().max(4096).default(""),
+    mailbox: z.string().trim().max(320).default(""),
     host: z
       .string()
       .trim()
@@ -32,7 +37,33 @@ export const configSchema = z
       .refine((s) => !s || /^[a-zA-Z0-9.-]+$/.test(s), "Ungültiger TLS-Hostname"),
   })
   .superRefine((c, ctx) => {
-    if (c.authenticate) {
+    if (c.profile === "m365") {
+      for (const field of ["tenantId", "clientId"] as const) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(c[field]))
+          ctx.addIssue({ code: "custom", path: [field], message: "Gültige GUID eingeben" });
+      }
+      if (!c.clientSecret.trim())
+        ctx.addIssue({ code: "custom", path: ["clientSecret"], message: "Client Secret fehlt" });
+      if (!z.email().safeParse(c.mailbox).success)
+        ctx.addIssue({
+          code: "custom",
+          path: ["mailbox"],
+          message: "Gültige E-Mail-Adresse eingeben",
+        });
+      if (
+        c.host !== "smtp.office365.com" ||
+        c.port !== 587 ||
+        c.security !== "starttls" ||
+        !c.validateCertificate ||
+        c.servername
+      )
+        ctx.addIssue({
+          code: "custom",
+          path: ["host"],
+          message:
+            "Microsoft 365 benötigt smtp.office365.com:587 mit STARTTLS und Zertifikatsprüfung",
+        });
+    } else if (c.authenticate) {
       if (!c.username.trim())
         ctx.addIssue({ code: "custom", path: ["username"], message: "Benutzername fehlt" });
       if (!c.password)
@@ -52,10 +83,15 @@ export const configSchema = z
       if (!c.message.trim())
         ctx.addIssue({ code: "custom", path: ["message"], message: "Nachricht fehlt" });
     }
-  });
+  })
+  .transform((c) =>
+    c.profile === "m365"
+      ? { ...c, authenticate: true, username: "", password: "" }
+      : { ...c, tenantId: "", clientId: "", clientSecret: "", mailbox: "" },
+  );
 
 export type SMTPConfig = z.infer<typeof configSchema>;
-export type Stage = "connection" | "mail";
+export type Stage = "token" | "connection" | "mail";
 export type TestEvent =
   | { type: "log"; level: "info" | "success" | "error"; message: string; time: string }
   | { type: "stage"; stage: Stage }
@@ -64,6 +100,7 @@ export type TestEvent =
       success: boolean;
       duration: number;
       connected: boolean;
+      tokenAcquired?: boolean | null;
       authenticated: boolean | null;
       sent: boolean | null;
       response?: string;
@@ -73,6 +110,11 @@ export type TestEvent =
     };
 export type TestOutcome = Extract<TestEvent, { type: "done" }>;
 export const defaults: SMTPConfig = {
+  profile: "smtp",
+  tenantId: "",
+  clientId: "",
+  clientSecret: "",
+  mailbox: "",
   host: "",
   port: 587,
   security: "starttls",
@@ -89,3 +131,9 @@ export const defaults: SMTPConfig = {
   validateCertificate: true,
   servername: "",
 };
+
+// Credentials and message contents never enter the result/export settings.
+export function publicSettings(config: SMTPConfig) {
+  const { username, password, clientSecret, message, ...settings } = config;
+  return settings;
+}
