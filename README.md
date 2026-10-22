@@ -12,6 +12,14 @@ everyday troubleshooting easier. It is intended to run locally or behind a
 reverse proxy with an authentication layer. It has not been hardened for direct
 exposure to the public internet.
 
+## Microsoft 365 OAuth
+
+Choose **Microsoft 365 OAuth** and enter your existing Tenant ID, Application
+(Client) ID, Client Secret **value**, and authentication mailbox. Test token
+acquisition and SMTP authentication, or send a test email. Requires Exchange
+Online `SMTP.SendAsApp`, admin consent, mailbox permissions, and SMTP AUTH.
+See [OAuth test notes](docs/m365-oauth.md).
+
 ## Docker Compose
 
 ```bash
