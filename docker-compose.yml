@@ -1,6 +1,8 @@
 # Standalone deployment: Docker fetches the build context directly from GitHub.
 services:
   simple-smtp-test:
+    container_name: simple-smtp-test
+    image: simple-smtp-test:latest
     build:
       context: https://github.com/forke24x7/simple-smtp-test.git#feature/m365-oauth
       dockerfile: Dockerfile
